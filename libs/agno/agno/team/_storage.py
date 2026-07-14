@@ -755,23 +755,6 @@ def to_dict(team: "Team") -> Dict[str, Any]:
     # if team.compression_manager is not None:
     #     config["compression_manager"] = team.compression_manager.to_dict()
 
-    # --- Reasoning settings ---
-    if team.reasoning:
-        config["reasoning"] = team.reasoning
-    if team.reasoning_model is not None:
-        # Mirrors the agent side. from_dict does not read this back yet
-        # (#9452), so it is not round-tripped -- but without it the field is
-        # lost at SAVE time, which leaves nothing for a loader to notice or a
-        # future reconstruction to restore.
-        if isinstance(team.reasoning_model, Model):
-            config["reasoning_model"] = team.reasoning_model.to_dict()
-        else:
-            config["reasoning_model"] = str(team.reasoning_model)
-    if team.reasoning_min_steps != 1:  # default is 1
-        config["reasoning_min_steps"] = team.reasoning_min_steps
-    if team.reasoning_max_steps != 10:  # default is 10
-        config["reasoning_max_steps"] = team.reasoning_max_steps
-
     # --- Streaming settings ---
     if team.stream is not None:
         config["stream"] = team.stream
@@ -1073,15 +1056,6 @@ def from_dict(
                     )
                 log_warning(f"Team member of unknown type skipped: {member_type!r}")
 
-    # --- Handle reasoning_model reconstruction ---
-    # TODO: implement reasoning model deserialization
-    # if "reasoning_model" in config:
-    #     model_data = config["reasoning_model"]
-    #     if isinstance(model_data, dict) and "id" in model_data:
-    #         config["reasoning_model"] = get_model(f"{model_data['provider']}:{model_data['id']}")
-    #     elif isinstance(model_data, str):
-    #         config["reasoning_model"] = get_model(model_data)
-
     # --- Handle parser_model reconstruction ---
     # TODO: implement parser model deserialization
     # if "parser_model" in config:
@@ -1242,6 +1216,22 @@ def from_dict(
         log_debug("'num_past_session_runs' has been deprecated. Use 'num_past_session_runs_in_search' instead.")
         config.pop("num_past_session_runs", None)
 
+    if "reasoning" in config:
+        log_debug("'reasoning' has been deprecated. Use ReasoningTools instead.")
+        config.pop("reasoning", None)
+
+    if "reasoning_model" in config:
+        log_debug("'reasoning_model' has been deprecated. Use ReasoningTools instead.")
+        config.pop("reasoning_model", None)
+
+    if "reasoning_min_steps" in config:
+        log_debug("'reasoning_min_steps' has been deprecated.")
+        config.pop("reasoning_min_steps", None)
+
+    if "reasoning_max_steps" in config:
+        log_debug("'reasoning_max_steps' has been deprecated.")
+        config.pop("reasoning_max_steps", None)
+
     team = cast(
         "Team",
         cls(
@@ -1340,11 +1330,6 @@ def from_dict(
             # --- Compression settings ---
             compress_tool_results=config.get("compress_tool_results", False),
             # compression_manager=config.get("compression_manager"),  # TODO
-            # --- Reasoning settings ---
-            reasoning=config.get("reasoning", False),
-            # reasoning_model=config.get("reasoning_model"),  # TODO
-            reasoning_min_steps=config.get("reasoning_min_steps", 1),
-            reasoning_max_steps=config.get("reasoning_max_steps", 10),
             # --- Streaming settings ---
             stream=config.get("stream"),
             stream_events=config.get("stream_events"),
